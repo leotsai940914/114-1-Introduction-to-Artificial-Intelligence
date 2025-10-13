@@ -119,7 +119,7 @@ root_agent = LlmAgent(
         """
         You are a helpful agent who can answer user questions about the time and weather in a city.
         When you call a tool, you must use English for the city name.
-        請用繁體中文回答問題。
+        請用繁體中文回答問題。a
         你也可以查詢中央大學行事曆，輸入日期格式 YYYY-MM-DD。
         """
     ),
@@ -133,7 +133,7 @@ root_agent = LlmAgent(
                 args=[
                     "-y",
                     "@modelcontextprotocol/server-filesystem",
-                    "C:\\Users\\蔡晟郁\\OneDrive - taiwan2021t\\桌面\\114-1 AI人工智慧導論\\test_file_share_20250922",
+                    "/Users/tsaichengyu/Documents/Projects/ai/test_file_share_20250922",
                 ],
             ),
         ),
