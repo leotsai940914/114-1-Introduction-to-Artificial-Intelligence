@@ -5,18 +5,19 @@ from google.adk.tools.mcp_tool.mcp_toolset import (
     MCPToolset, 
     StdioServerParameters,
     SseConnectionParams,
-
-                                                   )
+)
 import requests
 import os
-from dotenv import load_dotenv, dotenv_values
-# importing module
-#from geopy.geocoders import Nominatim
-#from timezonefinder import TimezoneFinder
+from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# -------------------------------------------------------------
+# 🌍 Initialize environment
+# -------------------------------------------------------------
 load_dotenv()
 
+# -------------------------------------------------------------
+# 🌦️ Weather Tool
+# -------------------------------------------------------------
 def get_weather(city: str) -> dict:
     """Retrieves the current weather report for a specified city.
     Args:
@@ -25,19 +26,6 @@ def get_weather(city: str) -> dict:
     Returns:
         dict: status and result or error msg.
     """
-    # if city.lower() == "new york":
-    #     return {
-    #         "status": "success",
-    #         "report": (
-    #             "The weather in New York is sunny with a temperature of 25 degrees"
-    #             " Celsius (77 degrees Fahrenheit)."
-    #         ),
-    #     }
-    # else:
-    #     return {
-    #         "status": "error",
-    #         "error_message": f"Weather information for '{city}' is not available.",
-    #     }
     api_key = os.getenv("OPEN_WEATHER_MAP_API_KEY")
     if not api_key:
         return {
@@ -47,9 +35,8 @@ def get_weather(city: str) -> dict:
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
     try:
         response = requests.get(url)
-        response.raise_for_status()  # Raise an error for bad responses
+        response.raise_for_status()
         data = response.json()
-        print(data)
         if data["cod"] != 200:
             return {
                 "status": "error",
@@ -69,28 +56,16 @@ def get_weather(city: str) -> dict:
         }
 
 
+# -------------------------------------------------------------
+# 🕒 Time Tool
+# -------------------------------------------------------------
 def get_current_time(tz_identifier: str) -> dict:
     """Returns the current time in a specified time zone identifier.
     Args:
         tz_identifier (str): The time zone identifier for which to retrieve the current time.
-        ex. New York -> "America/New_York", Taipei -> "Asia/Taipei", etc.
-        But sometimes the city name is not the same as the tz_identifier.
-        ex. Taoyuan -> "Asia/Taipei", Kaohsiung -> "Asia/Taipei", etc.
     Returns:
         dict: status and result or error msg.
     """
-
-    # city_taiwan = ["taipei", "zhongli", "taoyuan", "kaohsiung", "taichung"]
-
-    # if city.lower() == "new york":
-    #     tz_identifier = "America/New_York"
-    # elif city.lower() in city_taiwan:
-    #     tz_identifier = "Asia/Taipei"
-    # else:
-    #     return {
-    #         "status": "error",
-    #         "error_message": (f"Sorry, I don't have timezone information for {city}."),
-    #     }
     try:
         tz = ZoneInfo(tz_identifier)
         now = datetime.datetime.now(tz)
@@ -103,61 +78,31 @@ def get_current_time(tz_identifier: str) -> dict:
         }
 
 
-# def get_current_time(city: str) -> dict:
-#     """Returns the current time in a specified city.
-#     Args:
-#         city (str): The name of the city for which to retrieve the current time.
-#     Returns:
-#         dict: status and result or error msg.
-#     """
-#     # initialize Nominatim API
-#     geolocator = Nominatim(user_agent="geoapiExercises")
-
-#     # input as a geek
-#     # lad = "Dhaka"
-#     print("Location address:", city)
-
-#     # getting Latitude and Longitude
-#     location = geolocator.geocode(city)
-
-#     print("Latitude and Longitude of the said address:")
-#     print((location.latitude, location.longitude))
-
-#     # pass the Latitude and Longitude
-#     # into a timezone_at
-#     # and it return timezone
-#     obj = TimezoneFinder()
-
-#     # returns 'Europe/Berlin'
-#     result = obj.timezone_at(lng=location.longitude, lat=location.latitude)
-#     print("Time Zone : ", result)
-#     try:
-#         tz = ZoneInfo(result)
-#         now = datetime.datetime.now(tz)
-#         report = f'The current time is {now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}'
-#         return {"status": "success", "report": report}
-#     except Exception as e:
-#         return {
-#             "status": "error",
-#             "error_message": f"An error occurred while fetching the current time: {str(e)}",
-#         }
-
+# -------------------------------------------------------------
+# 🤖 Agent Definition
+# -------------------------------------------------------------
 root_agent = LlmAgent(
     name="weather_time_agent",
     model="gemini-2.5-flash",
-    description=("Agent to answer questions about the time and weather in a city."),
+    description=("Agent to answer questions about weather, time, mood, and manage shared files."),
     instruction=(
         """
-        You are a helpful agent who can answer user questions about the time and weather in a city.
-        When you call a tool, you must use English for the city name.
+        你是一個能回答時間、天氣與心情問題，也能操作指定資料夾檔案的智慧代理。
+        檔案操作範圍限於 /Users/tsaichengyu/Documents/Projects/ai/test_file_share_20250922。
+        當你呼叫工具時，若涉及城市名稱請使用英文。
         請用繁體中文回答問題。
         """
     ),
     tools=[
+        # --- Local Python Tools ---
         get_weather,
         get_current_time,
+
+        # -------------------------------------------------------------
+        # 🌤️ Local MCP server: weather2mood
+        # 提供 get_mood、read_file、write_file、list_directory
+        # -------------------------------------------------------------
         MCPToolset(
-            # Use StdioServerParameters for local process communication
             connection_params=StdioServerParameters(
                 command="/Users/tsaichengyu/.local/bin/uv",
                 args=[
@@ -168,23 +113,29 @@ root_agent = LlmAgent(
                 ]
             ),
             tool_filter=[
-                 "read_file",
-                 "list_directory",
-            ],   #Optional: filter specific tools
-            # For remote servers, you would use SseServerParams instead:
-            # connection_params=SseServerParams(url="http://remote-server:port/path", headers={...})
+                "get_mood",          # 💬 心情生成工具
+                "read_file",         # 📂 讀取檔案
+                "write_file",        # ✍️ 寫入檔案
+                "list_directory",    # 📁 列出資料夾檔案
+            ],
         ),
+
+        # -------------------------------------------------------------
+        # 🌐 Remote SSE MCP server (CoinGecko or others)
+        # -------------------------------------------------------------
         MCPToolset(
-            # Use StdioServerParameters for local process communication
             connection_params=SseConnectionParams(
-                url="https://mcp.api.coingecko.com/sse",  # URL for the SSE server
+                url="https://mcp.api.coingecko.com/sse",
             ),
-            # tool_filter=[
-            #     "read_file",
-            #     "list_directory",
-            # ],  # Optional: filter specific tools
-            # For remote servers, you would use SseServerParams instead:
-            # connection_params=SseServerParams(url="http://remote-server:port/path", headers={...})
+        ),
+
+        # -------------------------------------------------------------
+        # 🪙 Local custom MCP SSE server (your own tool)
+        # -------------------------------------------------------------
+        MCPToolset(
+            connection_params=SseConnectionParams(
+                url="http://127.0.0.1:5002/sse",  # 你自建的本地 SSE MCP server
+            ),
         ),
     ],
 )
