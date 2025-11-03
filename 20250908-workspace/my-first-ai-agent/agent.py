@@ -1,7 +1,12 @@
 import datetime
 from zoneinfo import ZoneInfo
 from google.adk.agents import LlmAgent
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
+from google.adk.tools.mcp_tool.mcp_toolset import (
+    MCPToolset, 
+    StdioServerParameters,
+    SseConnectionParams,
+
+                                                   )
 import requests
 import os
 from dotenv import load_dotenv, dotenv_values
@@ -161,6 +166,18 @@ root_agent = LlmAgent(
                     "run",
                     "server.py",
                 ]
+            ),
+            tool_filter=[
+                 "read_file",
+                 "list_directory",
+            ],   #Optional: filter specific tools
+            # For remote servers, you would use SseServerParams instead:
+            # connection_params=SseServerParams(url="http://remote-server:port/path", headers={...})
+        ),
+        MCPToolset(
+            # Use StdioServerParameters for local process communication
+            connection_params=SseConnectionParams(
+                url="https://mcp.api.coingecko.com/sse",  # URL for the SSE server
             ),
             # tool_filter=[
             #     "read_file",
