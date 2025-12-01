@@ -6,6 +6,7 @@ from google.adk.tools.mcp_tool.mcp_toolset import (
     StdioServerParameters,
     SseConnectionParams,
 )
+from google.adk.models.lite_llm import LiteLlm
 import requests
 import os
 from dotenv import load_dotenv
@@ -83,7 +84,8 @@ def get_current_time(tz_identifier: str) -> dict:
 # -------------------------------------------------------------
 root_agent = LlmAgent(
     name="weather_time_agent",
-    model="gemini-2.5-flash",
+    #model="gemini-2.5-flash",
+    model=LiteLlm("ollama_chat/qwen3:0.6b"),
     description=("Agent to answer questions about weather, time, mood, and manage shared files."),
     instruction=(
         """
@@ -95,6 +97,7 @@ root_agent = LlmAgent(
     ),
     tools=[
         # --- Local Python Tools ---
+
         get_weather,
         get_current_time,
 
@@ -102,40 +105,43 @@ root_agent = LlmAgent(
         # 🌤️ Local MCP server: weather2mood
         # 提供 get_mood、read_file、write_file、list_directory
         # -------------------------------------------------------------
-        MCPToolset(
-            connection_params=StdioServerParameters(
-                command="/Users/tsaichengyu/.local/bin/uv",
-                args=[
-                    "--directory",
-                    "/Users/tsaichengyu/Documents/Projects/ai/20251013-weather2mood",
-                    "run",
-                    "server.py",
-                ]
-            ),
-            tool_filter=[
-                "get_mood",          # 💬 心情生成工具
-                "read_file",         # 📂 讀取檔案
-                "write_file",        # ✍️ 寫入檔案
-                "list_directory",    # 📁 列出資料夾檔案
-            ],
-        ),
+
+         MCPToolset(
+             connection_params=StdioServerParameters(
+                 command="/Users/tsaichengyu/.local/bin/uv",
+                 args=[
+                     "--directory",
+                     "/Users/tsaichengyu/Documents/Projects/ai/20251013-weather2mood",
+                     "run",
+                     "server.py",
+                 ]
+             ),
+             tool_filter=[
+                 "get_mood",          # 💬 心情生成工具
+                 "read_file",         # 📂 讀取檔案
+                 "write_file",        # ✍️ 寫入檔案
+                 "list_directory",    # 📁 列出資料夾檔案
+             ],
+         ),
 
         # -------------------------------------------------------------
         # 🌐 Remote SSE MCP server (CoinGecko or others)
         # -------------------------------------------------------------
-        MCPToolset(
-            connection_params=SseConnectionParams(
-                url="https://mcp.api.coingecko.com/sse",
-            ),
-        ),
+
+        # MCPToolset(
+        #     connection_params=SseConnectionParams(
+        #         url="https://mcp.api.coingecko.com/sse",
+        #     ),
+        # ),
 
         # -------------------------------------------------------------
         # 🪙 Local custom MCP SSE server (your own tool)
         # -------------------------------------------------------------
-        MCPToolset(
-            connection_params=SseConnectionParams(
-                url="http://127.0.0.1:5002/sse",  # 你自建的本地 SSE MCP server
-            ),
-        ),
+        
+        # MCPToolset(
+        #     connection_params=SseConnectionParams(
+        #         url="http://127.0.0.1:5002/sse",  # 你自建的本地 SSE MCP server
+        #     ),
+        # ),
     ],
 )
